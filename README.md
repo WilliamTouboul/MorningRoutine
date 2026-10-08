@@ -395,7 +395,7 @@ Updates and inventories change slowly, so every 2 h with an on-demand refresh. D
 - [ ] **Email digest** in v1, or in-app only?
 - [ ] **Optional IP allow-list** on the connector (accept requests only from the dashboard's IP)?
 - [ ] **Encrypt inventories at rest** in the DB, or rely on encrypted backups and DB access control? (see T1)
-- [ ] **Plugin slug on wordpress.org**: check that `morning-routine` (or a variant) is available.
+- [x] **Plugin slug on wordpress.org**: `morning-routine` is not taken (checked 2026-10-08 via the plugins API). Final reservation only happens at submission.
 
 ## License
 
