@@ -39,5 +39,33 @@ services:
       retries: 20
       start_period: 30s
 
+  wordpress-legacy:
+    # Built from our own Dockerfile (PHP 7.4, no sodium extension).
+    build: ./docker/wordpress-legacy
+    image: morning-routine/wordpress-legacy:local
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        # Wait for the health check, not just for the container to exist.
+        condition: service_healthy
+    environment:
+      # "mysql" is the service name above: containers on the same Compose
+      # network reach each other by name.
+      WORDPRESS_DB_HOST: mysql
+      WORDPRESS_DB_NAME: ${WP_LEGACY_DB_NAME:?}
+      WORDPRESS_DB_USER: ${WP_LEGACY_DB_USER:?}
+      WORDPRESS_DB_PASSWORD: ${WP_LEGACY_DB_PASSWORD:?}
+      WORDPRESS_DEBUG: 1
+      WORDPRESS_CONFIG_EXTRA: |
+        define( 'WP_ENVIRONMENT_TYPE', 'local' );
+        // Keep the test site frozen: versions only change when we decide.
+        define( 'AUTOMATIC_UPDATER_DISABLED', true );
+    volumes:
+      # WordPress files (core, plugins, uploads) persist across restarts.
+      - wp-legacy-html:/var/www/html
+    ports:
+      - "127.0.0.1:${WP_LEGACY_HOST_PORT:-8074}:80"
+
 volumes:
   mysql-data:
+  wp-legacy-html:

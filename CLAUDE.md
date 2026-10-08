@@ -76,6 +76,14 @@ docker compose down -v          # same, and DELETE the data volume (re-runs init
 
 MySQL is reachable from the host on `127.0.0.1:3307` (`MYSQL_HOST_PORT`). Each application has its own database and user (`wp_legacy`, `wp_modern`, `dashboard`), created by `docker/mysql/init/` on first start. The root account is never used by an application.
 
+| Service | URL | Stack | Purpose |
+|---|---|---|---|
+| `wordpress-legacy` | http://localhost:8074 | PHP 7.4.33, WordPress 6.1.1, **no `ext-sodium`** | Oldest supported stack; forces the `sodium_compat` path |
+
+Test sites have automatic updates disabled so their versions only change on purpose. After changing a Dockerfile: `docker compose up -d --build`.
+
+In Git Bash, prefix `docker compose exec` commands that contain absolute Linux paths with `MSYS_NO_PATHCONV=1`, otherwise Git Bash rewrites `/var/...` into a Windows path.
+
 ---
 
 ## Roadmap v1
@@ -91,7 +99,7 @@ Each block is sized for one focused work session and ends with green tests and a
 - ☑ **0.3 GitHub remote.** Create the repository, push, set description and topics.
 - ☑ **0.4 Docker installation and concepts.** Docker Desktop with WSL 2, `hello-world`, and the four core notions: image, container, volume, network. No project files yet.
 - ☑ **0.5 Docker: MySQL service.** Compose file with MySQL, named volume, `.env` for credentials, `.env.example` committed.
-- ☐ **0.6 Docker: legacy WordPress.** WordPress on PHP 7.4, probably a custom image because official 7.4 tags are no longer maintained.
+- ☑ **0.6 Docker: legacy WordPress.** WordPress on PHP 7.4, probably a custom image because official 7.4 tags are no longer maintained.
 - ☐ **0.7 Docker: modern WordPress.** WordPress on PHP 8.3, plus a WP-CLI service that installs both sites automatically.
 - ☐ **0.8 Docker: connector mount.** `connector/` mounted as a plugin in both sites (placeholder plugin), so code changes are live.
 - ☐ **0.9 Laravel skeleton.** Generate the app in `dashboard/` with the official React starter kit (Inertia + TypeScript).
