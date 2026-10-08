@@ -1,0 +1,23 @@
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 4
+
+[*.{js,jsx,ts,tsx,json,yml,yaml,css}]
+indent_size = 2
+
+[*.md]
+trim_trailing_whitespace = false
+
+# WordPress Coding Standards require tabs in the connector.
+# lib/ is a build-time copy of packages/protocol and keeps its own style.
+[connector/**.php]
+indent_style = tab
+
+[connector/lib/**.php]
+indent_style = space
