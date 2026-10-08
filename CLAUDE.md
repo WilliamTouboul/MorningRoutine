@@ -4,7 +4,7 @@ Guidance for Claude (and any contributor) working on this repository. The design
 
 ## Project in one paragraph
 
-Agreg (working title) is a self-hosted dashboard that monitors a fleet of WordPress sites: updates, versions, Site Health, pending comments, uptime, TLS expiry, and known vulnerabilities matched locally. It has two deliverables: a **Laravel + Inertia + React/TypeScript dashboard** (`dashboard/`) and a **dependency-free WordPress connector plugin** (`connector/`). v1 is **strictly read-only**. It is also a portfolio project, so code quality, tests and documentation matter as much as features.
+MorningRoutine is a self-hosted dashboard that monitors a fleet of WordPress sites: updates, versions, Site Health, pending comments, uptime, TLS expiry, and known vulnerabilities matched locally. It has two deliverables: a **Laravel + Inertia + React/TypeScript dashboard** (`dashboard/`) and a **dependency-free WordPress connector plugin** (`connector/`). v1 is **strictly read-only**. It is also a portfolio project, so code quality, tests and documentation matter as much as features.
 
 ## Non-negotiable rules
 
@@ -34,7 +34,7 @@ Agreg (working title) is a self-hosted dashboard that monitors a fleet of WordPr
 - **Language:** code, comments, docs and commits are in English. Discussion with the maintainer is in French.
 - **Small blocks:** work one roadmap block at a time. A block is done when its description is met **and tested**.
 - **Tests are part of the block**, not a later step. Security-relevant code references its threat ID in the test name or docblock (e.g. `T5: rejects a replayed nonce`).
-- **Connector:** WordPress Coding Standards (PHPCS), everything prefixed `agreg_` / namespaced `Agreg\Connector`, escape on output, sanitize on input, capability checks on admin screens.
+- **Connector:** WordPress Coding Standards (PHPCS), everything prefixed `morning_routine_` / namespaced `MorningRoutine\Connector`, escape on output, sanitize on input, capability checks on admin screens.
 - **Dashboard:** Laravel conventions, PHPStan/Larastan at a strict level, strict TypeScript, no `any`.
 - **Teaching mode:** the maintainer knows PHP and WordPress well, has Laravel basics, and is new to Docker. When introducing a Docker or Laravel concept for the first time, explain it briefly.
 - **Commits:** one logical change per commit, conventional prefixes (`feat(connector):`, `fix(dashboard):`, `docs:`, `test:`, `chore:`).
@@ -75,7 +75,7 @@ Each block is sized for one focused work session and ends with green tests and a
 
 - ☑ **0.1 Architecture ADR.** Write ADR-009 (layers, dependency rule, folder layout for dashboard and connector, shared protocol package). Update the README and this file.
 - ☑ **0.2 Git repository.** `git init`, `.gitignore`, `.gitattributes` (force LF line endings, essential on Windows), `.editorconfig`, LICENSE, first commit.
-- ☐ **0.3 GitHub remote.** Create the repository, push, set description and topics.
+- ☑ **0.3 GitHub remote.** Create the repository, push, set description and topics.
 - ☐ **0.4 Docker installation and concepts.** Docker Desktop with WSL 2, `hello-world`, and the four core notions: image, container, volume, network. No project files yet.
 - ☐ **0.5 Docker: MySQL service.** Compose file with MySQL, named volume, `.env` for credentials, `.env.example` committed.
 - ☐ **0.6 Docker: legacy WordPress.** WordPress on PHP 7.4, probably a custom image because official 7.4 tags are no longer maintained.
@@ -111,7 +111,7 @@ Each block is sized for one focused work session and ends with green tests and a
 - ☐ **2.8 Collector: comments.** Pending comment count only.
 - ☐ **2.9 Inventory assembler.** Builds the `status` payload; tests validate it against `status.v1.json`.
 - ☐ **2.10 Site key storage.** Keypair generation, storage in options, fingerprint.
-- ☐ **2.11 Admin screen.** Settings → Agreg: connection status. Capability checks, nonces, escaping.
+- ☐ **2.11 Admin screen.** Settings → MorningRoutine: connection status. Capability checks, nonces, escaping.
 - ☐ **2.12 Pairing code.** Generation (15 min TTL, single use), display and copy button.
 - ☐ **2.13 `POST /pair` endpoint.** HMAC check, TTL, single use, stores the dashboard public key, signed response.
 - ☐ **2.14 Request verifier.** Signature, ±300 s window, nonce cache (T4, T5).
@@ -123,7 +123,7 @@ Each block is sized for one focused work session and ends with green tests and a
 ### Phase 3: Dashboard core
 
 - ☐ **3.1 Starter-kit cleanup.** Remove self-registration and anything not needed. Users are created from the CLI.
-- ☐ **3.2 User creation command.** `php artisan agreg:user:create`.
+- ☐ **3.2 User creation command.** `php artisan morning-routine:user:create`.
 - ☐ **3.3 Mandatory 2FA.** TOTP enforced for every account (reuse the starter kit's Fortify 2FA if present).
 - ☐ **3.4 HTTP hardening.** Secure cookies, session regeneration, security headers, Content Security Policy.
 - ☐ **3.5 Login throttling and audit log.** Audit log table, authentication events recorded without sensitive data (T3, T15).

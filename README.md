@@ -1,10 +1,8 @@
-# Agreg
+# MorningRoutine
 
 > **Status: design phase, draft v0.1.** This document describes the intended architecture and threat model. No code has been written yet. It is meant to be challenged and iterated on before implementation starts.
 
-**Agreg is a self-hosted dashboard for developers who maintain several WordPress sites.** Open it in the morning and see at a glance what needs attention across every site you look after: pending updates, known vulnerabilities, outdated PHP, expiring certificates, sites that are down, comments waiting for moderation. If everything is green, you're done. If not, you address issues one by one.
-
-*Agreg is a working title.*
+**MorningRoutine is a self-hosted dashboard for developers who maintain several WordPress sites.** Open it in the morning and see at a glance what needs attention across every site you look after: pending updates, known vulnerabilities, outdated PHP, expiring certificates, sites that are down, comments waiting for moderation. If everything is green, you're done. If not, you address issues one by one.
 
 ---
 
@@ -26,7 +24,7 @@
 
 A freelance developer or small agency typically maintains a handful to a few hundred WordPress sites, often on different hosts (OVH, Hostinger, o2switch, managed WordPress hosting…), with different PHP versions and plugin sets. Checking each admin panel one by one doesn't scale, and the important signals get missed: *"this plugin on 3 of your sites has a known vulnerability"* is exactly the kind of information nobody sees until it's too late.
 
-Commercial tools exist (ManageWP, MainWP, WP Umbrella…). Agreg takes a deliberately different stance:
+Commercial tools exist (ManageWP, MainWP, WP Umbrella…). MorningRoutine takes a deliberately different stance:
 
 - **Security first.** The dashboard never stores WordPress credentials, and in v1 it is **read-only by design**: the connector does not expose a single endpoint that can modify a site.
 - **Privacy first.** The list of plugins installed on client sites is never sent to a third party. Vulnerability matching happens locally.
@@ -145,7 +143,7 @@ sequenceDiagram
     participant WP as WordPress admin<br/>(connector)
     participant D as Dashboard
 
-    Dev->>WP: Settings → Agreg → "Generate pairing code"
+    Dev->>WP: Settings → MorningRoutine → "Generate pairing code"
     WP->>WP: Generate site keypair (Ed25519)<br/>+ 256-bit one-time pairing secret (TTL 15 min)
     WP-->>Dev: Pairing code = site URL + site public key + pairing secret
     Dev->>D: Paste pairing code
@@ -201,7 +199,7 @@ Known limitation: premium or custom plugins that are not listed on wordpress.org
 | Key | Where it lives | Purpose |
 |---|---|---|
 | **Master secret** (256-bit) | Dashboard environment variable only. Never in the DB, never in logs | Root from which every per-site dashboard key is derived |
-| **Per-site dashboard keypair** (Ed25519) | Derived on demand: `seed = HKDF-SHA256(master, info = "agreg/v1/site-key" ‖ site_uuid ‖ key_version)`. Never stored | Signs requests to one specific site |
+| **Per-site dashboard keypair** (Ed25519) | Derived on demand: `seed = HKDF-SHA256(master, info = "morningroutine/v1/site-key" ‖ site_uuid ‖ key_version)`. Never stored | Signs requests to one specific site |
 | **Dashboard public key** for a site | Site's `wp_options` | Lets the connector verify requests |
 | **Site keypair** (Ed25519) | Site's `wp_options` | Signs responses, so the dashboard knows the data really comes from the paired connector |
 | **Site public key** | Dashboard DB (public, not sensitive) | Verifies responses |
@@ -213,17 +211,17 @@ Why derived keys? The database holds **no private key material at all**, yet eve
 Every request from the dashboard carries:
 
 ```
-X-Agreg-Site:       <site_uuid>
-X-Agreg-Key-Version:<key_version>
-X-Agreg-Timestamp:  <unix seconds>
-X-Agreg-Nonce:      <128-bit random, base64url>
-X-Agreg-Signature:  Ed25519( canonical string )
+X-MorningRoutine-Site:        <site_uuid>
+X-MorningRoutine-Key-Version: <key_version>
+X-MorningRoutine-Timestamp:   <unix seconds>
+X-MorningRoutine-Nonce:       <128-bit random, base64url>
+X-MorningRoutine-Signature:   Ed25519( canonical string )
 ```
 
 The canonical string binds the signature to everything that matters:
 
 ```
-AGREG-V1
+MORNINGROUTINE-V1
 <HTTP method>
 <site_uuid>
 <host as paired>
@@ -243,7 +241,7 @@ Repeated failures from one IP are throttled. If the host's clock drifts, the das
 
 ### 5.3 Signed responses
 
-The connector signs `AGREG-V1-RESPONSE ‖ request nonce ‖ SHA-256(body)` with the site key. Binding the response to the request nonce prevents an attacker from replaying an old, harmless-looking inventory to hide a newly installed vulnerable plugin.
+The connector signs `MORNINGROUTINE-V1-RESPONSE ‖ request nonce ‖ SHA-256(body)` with the site key. Binding the response to the request nonce prevents an attacker from replaying an old, harmless-looking inventory to hide a newly installed vulnerable plugin.
 
 ### 5.4 Transport
 
@@ -265,7 +263,7 @@ HTTPS is **required**. A site without valid HTTPS cannot be paired. That fact it
 }
 ```
 
-**Data minimization:** comment counts only, never comment content, author names or e-mail addresses. Agreg processes no personal data from the managed sites, which keeps it simple under GDPR.
+**Data minimization:** comment counts only, never comment content, author names or e-mail addresses. MorningRoutine processes no personal data from the managed sites, which keeps it simple under GDPR.
 
 ## 6. Threat model
 
@@ -315,7 +313,7 @@ flowchart LR
 
 ### 6.4 Non-goals
 
-- Protecting a site whose WordPress is already compromised. Agreg can *flag* risks, but it is not a security plugin or a firewall.
+- Protecting a site whose WordPress is already compromised. MorningRoutine can *flag* risks, but it is not a security plugin or a firewall.
 - Uptime monitoring from multiple geographic regions (v1 probes from a single location).
 
 ## 7. Architecture decision records
@@ -364,7 +362,7 @@ Updates and inventories change slowly, so every 2 h with an on-demand refresh. D
 #### ADR-010: One shared protocol package
 **Context:** the dashboard signs and the connector verifies, and vice versa for responses. Two implementations of the same canonical string will eventually drift, and a one-byte difference breaks every signature.
 
-**Decision:** `packages/protocol` (namespace `Agreg\Protocol`) is the only implementation of the protocol.
+**Decision:** `packages/protocol` (namespace `MorningRoutine\Protocol`) is the only implementation of the protocol.
 - PHP 7.4 syntax, no dependencies. It uses `hash_hkdf`, `hash_hmac` and the `sodium_*` functions: native `ext-sodium` on the dashboard, WordPress' bundled `sodium_compat` in the connector.
 - The dashboard consumes it through a Composer path repository.
 - The connector gets a build-time copy in `connector/lib/protocol/`, and a CI check verifies the copy is identical to the source. This keeps the plugin free of runtime dependencies (rule: no Composer in the connector).
@@ -397,7 +395,7 @@ Updates and inventories change slowly, so every 2 h with an on-demand refresh. D
 - [ ] **Email digest** in v1, or in-app only?
 - [ ] **Optional IP allow-list** on the connector (accept requests only from the dashboard's IP)?
 - [ ] **Encrypt inventories at rest** in the DB, or rely on encrypted backups and DB access control? (see T1)
-- [ ] **Final project name.**
+- [ ] **Plugin slug on wordpress.org**: check that `morning-routine` (or a variant) is available.
 
 ## License
 
