@@ -61,7 +61,20 @@ MorningRoutine is a self-hosted dashboard that monitors a fleet of WordPress sit
 
 ## Commands
 
-*To be filled in as blocks land (Docker, tests, lint, build).*
+*Filled in as blocks land.*
+
+### Docker environment
+
+```bash
+cp .env.example .env            # first time only, then set real passwords (openssl rand -hex 24)
+docker compose up -d            # start everything in the background
+docker compose ps               # status and health of each service
+docker compose logs -f mysql    # follow a service's logs
+docker compose down             # stop and remove containers (data volume is kept)
+docker compose down -v          # same, and DELETE the data volume (re-runs init scripts on next up)
+```
+
+MySQL is reachable from the host on `127.0.0.1:3307` (`MYSQL_HOST_PORT`). Each application has its own database and user (`wp_legacy`, `wp_modern`, `dashboard`), created by `docker/mysql/init/` on first start. The root account is never used by an application.
 
 ---
 
@@ -76,8 +89,8 @@ Each block is sized for one focused work session and ends with green tests and a
 - ☑ **0.1 Architecture ADR.** Write ADR-009 (layers, dependency rule, folder layout for dashboard and connector, shared protocol package). Update the README and this file.
 - ☑ **0.2 Git repository.** `git init`, `.gitignore`, `.gitattributes` (force LF line endings, essential on Windows), `.editorconfig`, LICENSE, first commit.
 - ☑ **0.3 GitHub remote.** Create the repository, push, set description and topics.
-- ☐ **0.4 Docker installation and concepts.** Docker Desktop with WSL 2, `hello-world`, and the four core notions: image, container, volume, network. No project files yet.
-- ☐ **0.5 Docker: MySQL service.** Compose file with MySQL, named volume, `.env` for credentials, `.env.example` committed.
+- ☑ **0.4 Docker installation and concepts.** Docker Desktop with WSL 2, `hello-world`, and the four core notions: image, container, volume, network. No project files yet.
+- ☑ **0.5 Docker: MySQL service.** Compose file with MySQL, named volume, `.env` for credentials, `.env.example` committed.
 - ☐ **0.6 Docker: legacy WordPress.** WordPress on PHP 7.4, probably a custom image because official 7.4 tags are no longer maintained.
 - ☐ **0.7 Docker: modern WordPress.** WordPress on PHP 8.3, plus a WP-CLI service that installs both sites automatically.
 - ☐ **0.8 Docker: connector mount.** `connector/` mounted as a plugin in both sites (placeholder plugin), so code changes are live.

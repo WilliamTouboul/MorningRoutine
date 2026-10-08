@@ -1,0 +1,43 @@
+# Local development environment for MorningRoutine.
+# Usage: copy .env.example to .env, fill in the passwords, then `docker compose up -d`.
+
+name: morning-routine
+
+services:
+  mysql:
+    # 8.4 is the current MySQL LTS line.
+    image: mysql:8.4
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?set MYSQL_ROOT_PASSWORD in .env}
+      # One database and one user per application, created by docker/mysql/init.
+      # No application ever uses the root account.
+      WP_LEGACY_DB_NAME: ${WP_LEGACY_DB_NAME:?}
+      WP_LEGACY_DB_USER: ${WP_LEGACY_DB_USER:?}
+      WP_LEGACY_DB_PASSWORD: ${WP_LEGACY_DB_PASSWORD:?}
+      WP_MODERN_DB_NAME: ${WP_MODERN_DB_NAME:?}
+      WP_MODERN_DB_USER: ${WP_MODERN_DB_USER:?}
+      WP_MODERN_DB_PASSWORD: ${WP_MODERN_DB_PASSWORD:?}
+      DASHBOARD_DB_NAME: ${DASHBOARD_DB_NAME:?}
+      DASHBOARD_DB_USER: ${DASHBOARD_DB_USER:?}
+      DASHBOARD_DB_PASSWORD: ${DASHBOARD_DB_PASSWORD:?}
+    volumes:
+      # Named volume: the data survives `docker compose down`.
+      # Only `docker compose down -v` deletes it.
+      - mysql-data:/var/lib/mysql
+      # Scripts in this folder run once, on the very first start (empty volume).
+      - ./docker/mysql/init:/docker-entrypoint-initdb.d:ro
+    ports:
+      # Bound to 127.0.0.1 only: reachable from this machine (for a SQL client),
+      # never from the local network.
+      - "127.0.0.1:${MYSQL_HOST_PORT:-3307}:3306"
+    healthcheck:
+      # Lets other services wait until MySQL actually accepts connections.
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p\"$$MYSQL_ROOT_PASSWORD\" --silent"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 30s
+
+volumes:
+  mysql-data:
