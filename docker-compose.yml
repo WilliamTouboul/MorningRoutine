@@ -3,6 +3,50 @@
 
 name: morning-routine
 
+# ---------------------------------------------------------------------------
+# Reusable blocks ("x-" keys are ignored by Docker, they only hold YAML anchors).
+# wp-config.php reads its settings from environment variables at runtime, so a
+# WordPress container and the WP-CLI container working on the same site must
+# share exactly the same variables.
+# ---------------------------------------------------------------------------
+x-wp-config-extra: &wp-config-extra |
+  define( 'WP_ENVIRONMENT_TYPE', 'local' );
+  // Keep test sites frozen: versions only change when we decide.
+  define( 'AUTOMATIC_UPDATER_DISABLED', true );
+
+x-wp-legacy-env: &wp-legacy-env
+  # "mysql" is the service name below: containers on the same Compose network
+  # reach each other by name.
+  WORDPRESS_DB_HOST: mysql
+  WORDPRESS_DB_NAME: ${WP_LEGACY_DB_NAME:?}
+  WORDPRESS_DB_USER: ${WP_LEGACY_DB_USER:?}
+  WORDPRESS_DB_PASSWORD: ${WP_LEGACY_DB_PASSWORD:?}
+  WORDPRESS_DEBUG: 1
+  WORDPRESS_CONFIG_EXTRA: *wp-config-extra
+
+x-wp-modern-env: &wp-modern-env
+  WORDPRESS_DB_HOST: mysql
+  WORDPRESS_DB_NAME: ${WP_MODERN_DB_NAME:?}
+  WORDPRESS_DB_USER: ${WP_MODERN_DB_USER:?}
+  WORDPRESS_DB_PASSWORD: ${WP_MODERN_DB_PASSWORD:?}
+  WORDPRESS_DEBUG: 1
+  WORDPRESS_CONFIG_EXTRA: *wp-config-extra
+
+x-wp-healthcheck: &wp-healthcheck
+  # Healthy once Apache serves a static WordPress file, which also proves the
+  # image has finished copying WordPress into the volume.
+  test: ["CMD", "curl", "-fsS", "-o", "/dev/null", "http://localhost/wp-includes/images/blank.gif"]
+  interval: 5s
+  timeout: 5s
+  retries: 20
+
+x-wp-cli: &wp-cli
+  # Same user id as Apache in the WordPress images (www-data = 33), so files
+  # created by WP-CLI (plugins, uploads) stay writable by the site.
+  user: "33:33"
+  restart: "no"
+  command: ["sh", "/setup/install-site.sh"]
+
 services:
   mysql:
     # 8.4 is the current MySQL LTS line.
@@ -39,8 +83,8 @@ services:
       retries: 20
       start_period: 30s
 
+  # --- Legacy site: PHP 7.4, WordPress 6.1.1, no sodium extension ------------
   wordpress-legacy:
-    # Built from our own Dockerfile (PHP 7.4, no sodium extension).
     build: ./docker/wordpress-legacy
     image: morning-routine/wordpress-legacy:local
     restart: unless-stopped
@@ -48,24 +92,67 @@ services:
       mysql:
         # Wait for the health check, not just for the container to exist.
         condition: service_healthy
-    environment:
-      # "mysql" is the service name above: containers on the same Compose
-      # network reach each other by name.
-      WORDPRESS_DB_HOST: mysql
-      WORDPRESS_DB_NAME: ${WP_LEGACY_DB_NAME:?}
-      WORDPRESS_DB_USER: ${WP_LEGACY_DB_USER:?}
-      WORDPRESS_DB_PASSWORD: ${WP_LEGACY_DB_PASSWORD:?}
-      WORDPRESS_DEBUG: 1
-      WORDPRESS_CONFIG_EXTRA: |
-        define( 'WP_ENVIRONMENT_TYPE', 'local' );
-        // Keep the test site frozen: versions only change when we decide.
-        define( 'AUTOMATIC_UPDATER_DISABLED', true );
+    environment: *wp-legacy-env
     volumes:
       # WordPress files (core, plugins, uploads) persist across restarts.
       - wp-legacy-html:/var/www/html
     ports:
       - "127.0.0.1:${WP_LEGACY_HOST_PORT:-8074}:80"
+    healthcheck: *wp-healthcheck
+
+  wp-cli-legacy:
+    <<: *wp-cli
+    # WP-CLI on the same PHP version as the site it manages.
+    image: wordpress:cli-2.7.1-php7.4
+    depends_on:
+      wordpress-legacy:
+        condition: service_healthy
+    environment:
+      <<: *wp-legacy-env
+      HOME: /tmp
+      SITE_URL: http://localhost:${WP_LEGACY_HOST_PORT:-8074}
+      SITE_TITLE: Legacy site (PHP 7.4)
+      WP_ADMIN_USER: ${WP_ADMIN_USER:?}
+      WP_ADMIN_PASSWORD: ${WP_ADMIN_PASSWORD:?}
+      WP_ADMIN_EMAIL: ${WP_ADMIN_EMAIL:?}
+    volumes:
+      - wp-legacy-html:/var/www/html
+      - ./docker/wp-cli:/setup:ro
+
+  # --- Modern site: PHP 8.3, current WordPress -------------------------------
+  wordpress-modern:
+    # Exact tag: WordPress and PHP versions only change when we bump it.
+    image: wordpress:7.1.3-php8.3-apache
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment: *wp-modern-env
+    volumes:
+      - wp-modern-html:/var/www/html
+    ports:
+      - "127.0.0.1:${WP_MODERN_HOST_PORT:-8083}:80"
+    healthcheck: *wp-healthcheck
+
+  wp-cli-modern:
+    <<: *wp-cli
+    image: wordpress:cli-2.12.0-php8.3
+    depends_on:
+      wordpress-modern:
+        condition: service_healthy
+    environment:
+      <<: *wp-modern-env
+      HOME: /tmp
+      SITE_URL: http://localhost:${WP_MODERN_HOST_PORT:-8083}
+      SITE_TITLE: Modern site (PHP 8.3)
+      WP_ADMIN_USER: ${WP_ADMIN_USER:?}
+      WP_ADMIN_PASSWORD: ${WP_ADMIN_PASSWORD:?}
+      WP_ADMIN_EMAIL: ${WP_ADMIN_EMAIL:?}
+    volumes:
+      - wp-modern-html:/var/www/html
+      - ./docker/wp-cli:/setup:ro
 
 volumes:
   mysql-data:
   wp-legacy-html:
+  wp-modern-html:

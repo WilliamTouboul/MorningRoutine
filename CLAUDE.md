@@ -79,8 +79,18 @@ MySQL is reachable from the host on `127.0.0.1:3307` (`MYSQL_HOST_PORT`). Each a
 | Service | URL | Stack | Purpose |
 |---|---|---|---|
 | `wordpress-legacy` | http://localhost:8074 | PHP 7.4.33, WordPress 6.1.1, **no `ext-sodium`** | Oldest supported stack; forces the `sodium_compat` path |
+| `wordpress-modern` | http://localhost:8083 | PHP 8.3, WordPress 7.1.3 | Current stack |
 
-Test sites have automatic updates disabled so their versions only change on purpose. After changing a Dockerfile: `docker compose up -d --build`.
+Both sites are installed automatically on `up` by one-shot WP-CLI containers (`wp-cli-legacy`, `wp-cli-modern`) running `docker/wp-cli/install-site.sh`. The script is idempotent: an installed site is left untouched, so the containers simply exit with code 0. Admin login for both sites: `WP_ADMIN_USER` / `WP_ADMIN_PASSWORD` from `.env`.
+
+Each site has its own WP-CLI on the same PHP version. Run any WP-CLI command against a site:
+
+```bash
+docker compose run --rm wp-cli-legacy wp plugin list
+docker compose run --rm wp-cli-modern wp plugin install wpforms-lite --version=1.8.4 --activate
+```
+
+Image tags are pinned (WordPress, PHP and WP-CLI versions) and test sites have automatic updates disabled, so versions only change on purpose. After changing a Dockerfile: `docker compose up -d --build`. To rebuild everything from scratch: `docker compose down -v && docker compose up -d` (about 20 s).
 
 In Git Bash, prefix `docker compose exec` commands that contain absolute Linux paths with `MSYS_NO_PATHCONV=1`, otherwise Git Bash rewrites `/var/...` into a Windows path.
 
@@ -100,7 +110,7 @@ Each block is sized for one focused work session and ends with green tests and a
 - ☑ **0.4 Docker installation and concepts.** Docker Desktop with WSL 2, `hello-world`, and the four core notions: image, container, volume, network. No project files yet.
 - ☑ **0.5 Docker: MySQL service.** Compose file with MySQL, named volume, `.env` for credentials, `.env.example` committed.
 - ☑ **0.6 Docker: legacy WordPress.** WordPress on PHP 7.4, probably a custom image because official 7.4 tags are no longer maintained.
-- ☐ **0.7 Docker: modern WordPress.** WordPress on PHP 8.3, plus a WP-CLI service that installs both sites automatically.
+- ☑ **0.7 Docker: modern WordPress.** WordPress on PHP 8.3, plus a WP-CLI service that installs both sites automatically.
 - ☐ **0.8 Docker: connector mount.** `connector/` mounted as a plugin in both sites (placeholder plugin), so code changes are live.
 - ☐ **0.9 Laravel skeleton.** Generate the app in `dashboard/` with the official React starter kit (Inertia + TypeScript).
 - ☐ **0.10 Docker: dashboard service.** PHP 8.3 container + Vite, dedicated database and user (separate from the WordPress ones), migrations run.
