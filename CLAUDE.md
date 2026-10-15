@@ -83,6 +83,8 @@ MySQL is reachable from the host on `127.0.0.1:3307` (`MYSQL_HOST_PORT`). Each a
 
 Both sites are installed automatically on `up` by one-shot WP-CLI containers (`wp-cli-legacy`, `wp-cli-modern`) running `docker/wp-cli/install-site.sh`. The script is idempotent: an installed site is left untouched, so the containers simply exit with code 0. Admin login for both sites: `WP_ADMIN_USER` / `WP_ADMIN_PASSWORD` from `.env`.
 
+`./connector/` is bind-mounted **read-only** into both sites as `wp-content/plugins/morning-routine` and activated by the setup script. Edits are live on the next request, no copy or restart needed. Because the mount is read-only, any attempt by the connector to write into its own directory fails loudly in development.
+
 Each site has its own WP-CLI on the same PHP version. Run any WP-CLI command against a site:
 
 ```bash
@@ -111,7 +113,7 @@ Each block is sized for one focused work session and ends with green tests and a
 - ☑ **0.5 Docker: MySQL service.** Compose file with MySQL, named volume, `.env` for credentials, `.env.example` committed.
 - ☑ **0.6 Docker: legacy WordPress.** WordPress on PHP 7.4, probably a custom image because official 7.4 tags are no longer maintained.
 - ☑ **0.7 Docker: modern WordPress.** WordPress on PHP 8.3, plus a WP-CLI service that installs both sites automatically.
-- ☐ **0.8 Docker: connector mount.** `connector/` mounted as a plugin in both sites (placeholder plugin), so code changes are live.
+- ☑ **0.8 Docker: connector mount.** `connector/` mounted as a plugin in both sites (placeholder plugin), so code changes are live.
 - ☐ **0.9 Laravel skeleton.** Generate the app in `dashboard/` with the official React starter kit (Inertia + TypeScript).
 - ☐ **0.10 Docker: dashboard service.** PHP 8.3 container + Vite, dedicated database and user (separate from the WordPress ones), migrations run.
 - ☐ **0.11 Architecture skeleton.** Create the layer folders from ADR-009 and **architecture tests** that fail the build if a layer breaks the dependency rule.

@@ -32,6 +32,12 @@ x-wp-modern-env: &wp-modern-env
   WORDPRESS_DEBUG: 1
   WORDPRESS_CONFIG_EXTRA: *wp-config-extra
 
+x-connector-mount: &connector-mount
+  # The plugin source is mounted live into every site (and its WP-CLI), so a
+  # code change is visible on the next request, without copying anything.
+  # Read-only: the connector must never write into its own directory.
+  ./connector:/var/www/html/wp-content/plugins/morning-routine:ro
+
 x-wp-healthcheck: &wp-healthcheck
   # Healthy once Apache serves a static WordPress file, which also proves the
   # image has finished copying WordPress into the volume.
@@ -96,6 +102,7 @@ services:
     volumes:
       # WordPress files (core, plugins, uploads) persist across restarts.
       - wp-legacy-html:/var/www/html
+      - *connector-mount
     ports:
       - "127.0.0.1:${WP_LEGACY_HOST_PORT:-8074}:80"
     healthcheck: *wp-healthcheck
@@ -117,6 +124,7 @@ services:
       WP_ADMIN_EMAIL: ${WP_ADMIN_EMAIL:?}
     volumes:
       - wp-legacy-html:/var/www/html
+      - *connector-mount
       - ./docker/wp-cli:/setup:ro
 
   # --- Modern site: PHP 8.3, current WordPress -------------------------------
@@ -130,6 +138,7 @@ services:
     environment: *wp-modern-env
     volumes:
       - wp-modern-html:/var/www/html
+      - *connector-mount
     ports:
       - "127.0.0.1:${WP_MODERN_HOST_PORT:-8083}:80"
     healthcheck: *wp-healthcheck
@@ -150,6 +159,7 @@ services:
       WP_ADMIN_EMAIL: ${WP_ADMIN_EMAIL:?}
     volumes:
       - wp-modern-html:/var/www/html
+      - *connector-mount
       - ./docker/wp-cli:/setup:ro
 
 volumes:
